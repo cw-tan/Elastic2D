@@ -52,8 +52,11 @@ def process_2D_elastic_constants(ds, stresses, c=None, symmetrize=True):
     """
     Fits the stress-strain data points to a quadratic polynomial and extracts
     the linear coefficient as the elastic constants. Note that the units of the
-    returned elastic constants is the units of the stresses times the units of 
-    the c variable (if given).
+    returned elastic constants is the units of the stresses times the units of
+    the c variable (if given). The distinction between the Voigt and Mandel notation
+    of the returned elastic constants can be found in
+    Marcin Maździarz 2019 2D Mater.6 048001
+    (https://iopscience.iop.org/article/10.1088/2053-1583/ab2ef3).
 
     Args:
         ds (Numpy array) : strain array output by gen_strained_lats()
@@ -137,6 +140,11 @@ def process_2D_elastic_constants(ds, stresses, c=None, symmetrize=True):
 
 def check_elastic_stability(Cs):
     """
+    Assesses the elastic stability using the criterion that the eigenvalues
+    of the elastic constants in Mandel notation must be positive.
+    Ref: Marcin Maździarz 2019 2D Mater.6 048001
+    (https://iopscience.iop.org/article/10.1088/2053-1583/ab2ef3).
+
     Args:
         Cs (Numpy array): 2D elastic constants in the second-rank tensor
                           or Mandel notation
@@ -149,6 +157,9 @@ def check_elastic_stability(Cs):
 
 def planar_bulk_modulus(Cs, extensibility=False):
     """
+    Computes the planar bulk modulus or areal extensibility as defined and derived
+    in https://doi.org/10.1016/j.carbon.2019.10.041.
+
     Args:
         Cs (Numpy array)    : 2D elastic constants in Voigt notation
         extensibility (bool): Whether to return the areal extensibility instead
@@ -161,5 +172,3 @@ def planar_bulk_modulus(Cs, extensibility=False):
         return k
     else:
         return 1 / k
-
-
