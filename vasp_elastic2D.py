@@ -18,7 +18,7 @@ def example_operations():
     # could optionally create and submit a cluster job script
 
 
-def setup_elastic2D(structure_file, operations):
+def setup_elastic2D(structure_file, operations, frac=0.02, N_sample=7):
     """
     Sets up 2D elastic calculations using VASP.
 
@@ -29,10 +29,14 @@ def setup_elastic2D(structure_file, operations):
     """
     struc = Structure.from_file(structure_file)
     lattice = struc.lattice.matrix
-    ds, def_lats = gen_strained_lats(lattice, f=0.02, N=7)
+    ds, def_lats = gen_strained_lats(lattice, f=frac, N=N_sample)
 
     os.mkdir('elastic')
     os.chdir('elastic')
+    with open('frac.dat', 'w') as f:
+        f.write('{}'.format(frac))
+    with open('N_sample.dat', 'w') as f:
+        f.write('{}'.format(N_sample))
 
     eps_dirs = ['eps_11', 'eps_22', 'eps_12']
 
@@ -54,14 +58,19 @@ def setup_elastic2D(structure_file, operations):
     os.chdir('..')
 
 
-def post_elastic2D(structure_file):
+def post_elastic2D(structure_file, plot=False, symmetrize=True):
 
     struc = Structure.from_file(structure_file)
     lattice = struc.lattice.matrix
-    ds, def_lats = gen_strained_lats(lattice, f=0.02, N=7)
 
     os.chdir('elastic')
+    with open('frac.dat', 'r') as f:
+        frac = float(f.readline())
+    with open('N_sample.dat', 'r') as f:
+        N_sample = int(f.readline())
 
+    ds, def_lats = gen_strained_lats(lattice, f=frac, N=N_sample)
+    
     # collect stresses
     eps_dirs = ['eps_11', 'eps_22', 'eps_12']
     stresses = []
@@ -70,15 +79,18 @@ def post_elastic2D(structure_file):
         stress_eps = []
         for j, lat in enumerate(def_lats[i]):
             os.chdir('deformed_lattice_{}'.format(j + 1))
-            stress = - np.array(Vasprun('vasprun.xml').ionic_steps[-1]['stress'])  # in kbar
+            try:
+                stress = - np.array(Vasprun('vasprun.xml').ionic_steps[-1]['stress'])  # in kbar
+            except:
+                print('Error in {}/deformed_lattice_{}'.format(eps_dir, j + 1))
             stress_eps.append(stress)
             os.chdir('..')
         stresses.append(stress_eps)
         os.chdir('..')
     os.chdir('..')
-
+ 
     # post-process elastic constants
-    Cs_voigt, Cs_mandel, Cs_err = process_2D_elastic_constants(ds, stresses, c=lattice[2, 2] * 1e-2, symmetrize=True)
+    Cs_voigt, Cs_mandel, Cs_err = process_2D_elastic_constants(ds, stresses, c=lattice[2, 2] * 1e-2, symmetrize=symmetrize, plot=plot)
     stable, eigvals = check_elastic_stability(Cs_mandel)
     bm = planar_bulk_modulus(Cs_voigt)
 

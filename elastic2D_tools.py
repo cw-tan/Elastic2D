@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def gen_strained_lats(lattice, f=0.02, N=7):
@@ -48,7 +49,7 @@ def gen_strained_lats(lattice, f=0.02, N=7):
     return ds, [eps_11_deformed_lattices, eps_22_deformed_lattices, eps_12_deformed_lattices]
 
 
-def process_2D_elastic_constants(ds, stresses, c=None, symmetrize=True):
+def process_2D_elastic_constants(ds, stresses, c=None, symmetrize=True, plot=False):
     """
     Fits the stress-strain data points to a quadratic polynomial and extracts
     the linear coefficient as the elastic constants. Note that the units of the
@@ -111,6 +112,29 @@ def process_2D_elastic_constants(ds, stresses, c=None, symmetrize=True):
     C1212_fit = np.polyfit(ds, np.array([stress[0, 1] for stress in stresses_eps12]), 2, full=True)
     C1212 = C1212_fit[0][-2]
     C1212_res = C1212_fit[1][0]
+
+    if plot:
+        fig, axs = plt.subplots(3, 3, sharex=True, gridspec_kw={'wspace': 0.5, 'hspace': 0})
+        axs[0, 0].plot(ds, np.array([stress[0, 0] for stress in stresses_eps11]), 'bx')
+        axs[0, 0].plot(ds, np.poly1d(C1111_fit[0])(ds), '--r')
+        axs[0, 1].plot(ds, np.array([stress[0, 0] for stress in stresses_eps22]), 'bx')
+        axs[0, 1].plot(ds, np.poly1d(C1122_fit[0])(ds), '--r')
+        axs[0, 2].plot(ds, np.array([stress[0, 0] for stress in stresses_eps12]), 'bx')
+        axs[0, 2].plot(ds, np.poly1d(C1112_fit[0])(ds), '--r')
+        axs[1, 0].plot(ds, np.array([stress[1, 1] for stress in stresses_eps11]), 'bx')
+        axs[1, 0].plot(ds, np.poly1d(C2211_fit[0])(ds), '--r')
+        axs[1, 1].plot(ds, np.array([stress[1, 1] for stress in stresses_eps22]), 'bx')
+        axs[1, 1].plot(ds, np.poly1d(C2222_fit[0])(ds), '--r')
+        axs[1, 2].plot(ds, np.array([stress[1, 1] for stress in stresses_eps12]), 'bx')
+        axs[1, 2].plot(ds, np.poly1d(C2212_fit[0])(ds), '--r')
+        axs[2, 0].plot(ds, np.array([stress[0, 1] for stress in stresses_eps11]), 'bx')
+        axs[2, 0].plot(ds, np.poly1d(C1211_fit[0])(ds), '--r')
+        axs[2, 1].plot(ds, np.array([stress[0, 1] for stress in stresses_eps22]), 'bx')
+        axs[2, 1].plot(ds, np.poly1d(C1222_fit[0])(ds), '--r')
+        axs[2, 2].plot(ds, np.array([stress[0, 1] for stress in stresses_eps12]), 'bx')
+        axs[2, 2].plot(ds, np.poly1d(C1212_fit[0])(ds), '--r')
+
+        plt.show()
 
     # possible future TODO: additional symmetrization based on lattice type
     if symmetrize:
