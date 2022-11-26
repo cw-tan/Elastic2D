@@ -1,10 +1,12 @@
 from sys import argv
+import os
 import subprocess
 from vasp_elastic2D import *
 
-task = 'post' # pre or post
+
+task = 'post'  # pre or post
 mpi = 48
-ecut = 520   # default plane wave cutoff is 520 eV
+ecut = 520     # default plane wave cutoff is 520 eV
 kspace = 0.03  # default kspace is 0.03 × 2π/Å
 sigma = 0.05
 ediff = '1E-6'
@@ -45,9 +47,7 @@ for i in range(len(argv)):
 def ops():
     subprocess.run('~/bin/pvf.py -t gr -d 2 -k {ksp} -e {ec} -s {sig} -vdw {vdw} -lreal f -isif 2 -isym 0 -ibrion {ib} -ediff {ed} -ftol {ft}'
                    .format(ksp=kspace, ec=ecut, sig=sigma, vdw=vdw_scheme, ib=ibrion, ed=ediff, ft=ftol), shell=True)
- 
     #subprocess.run(\'mpirun -np {mp} vasp_std\', shell=True)
-
     subprocess.run('~/bin/pbs.py dev -N {} -n 2 -v std'.format('-'.join(os.getcwd().split('/')[-5:])), shell=True)
     subprocess.run('find {} -name submit.pbs -exec qsub {{}} \;'.format(os.getcwd()), shell=True)
 
@@ -56,7 +56,6 @@ def ops():
 def ops_ic():
     subprocess.run('~/bin/pvf.py -t er -d 2 -k {ksp} -e {ec} -s {sig} -vdw {vdw} -lreal f -ediff {ed}'
                    .format(ksp=kspace, ec=ecut, sig=sigma, vdw=vdw_scheme, ed=ediff), shell=True)
- 
     subprocess.run('~/bin/pbs.py dev -N {} -n 2 -v std'.format('-'.join(os.getcwd().split('/')[-5:])), shell=True)
     subprocess.run('find {} -name submit.pbs -exec qsub {{}} \;'.format(os.getcwd()), shell=True)
 
@@ -75,7 +74,7 @@ def read_time():
 
 def unfinished():
     return read_time() is None
- 
+
 
 def reset():
     os.chdir('elastic')
@@ -85,10 +84,10 @@ def reset():
             os.chdir(sub_dir)
             if unfinished():
                 print('{}/{} unfinished and will be rerun.'.format(eps_dir, sub_dir))
-                subprocess.run('mv CONTCAR POSCAR', shell=True) 
+                subprocess.run('mv CONTCAR POSCAR', shell=True)
                 subprocess.run('find {} -name submit.pbs -exec qsub {{}} \;'.format(os.getcwd()), shell=True)
-            os.chdir('..')    
-        os.chdir('..') 
+            os.chdir('..')
+        os.chdir('..')
     os.chdir('..')
 
 
@@ -101,5 +100,4 @@ elif task == 'post':
 elif task == 'plot':
     post_elastic2D('CONTCAR', plot=True, symmetrize=sym)
 elif task == 'reset':
-    reset() 
-
+    reset()

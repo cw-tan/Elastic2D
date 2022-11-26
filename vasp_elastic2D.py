@@ -70,7 +70,7 @@ def post_elastic2D(structure_file, plot=False, symmetrize=True):
         N_sample = int(f.readline())
 
     ds, def_lats = gen_strained_lats(lattice, f=frac, N=N_sample)
-    
+
     # collect stresses
     eps_dirs = ['eps_11', 'eps_22', 'eps_12']
     stresses = []
@@ -88,9 +88,10 @@ def post_elastic2D(structure_file, plot=False, symmetrize=True):
         stresses.append(stress_eps)
         os.chdir('..')
     os.chdir('..')
- 
+
     # post-process elastic constants
-    Cs_voigt, Cs_mandel, Cs_err = process_2D_elastic_constants(ds, stresses, c=lattice[2, 2] * 1e-2, symmetrize=symmetrize, plot=plot)
+    Cs_voigt, Cs_mandel, Cs_err = process_2D_elastic_constants(ds, stresses, c=lattice[2, 2] * 1e-2,
+                                                               symmetrize=symmetrize, plot=plot)
     stable, eigvals = check_elastic_stability(Cs_mandel)
     bm = planar_bulk_modulus(Cs_voigt)
 
