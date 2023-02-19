@@ -2,26 +2,27 @@ from sys import argv
 import os
 import subprocess
 from vasp_elastic2D import *
-
+from pymatgen.io.vasp.inputs import Incar
 
 task = 'post'  # pre or post
 mpi = 48
 ecut = 520     # default plane wave cutoff is 520 eV
 kspace = 0.03  # default kspace is 0.03 × 2π/Å
 sigma = 0.05
-ediff = '1E-6'
+ediff = '1E-8'
 ftol = '0.002'
 ibrion = 2
 vdw_scheme = 'optB88'
 frac = 0.01
 N = 7
-sym = True
+sym = False
+q = 'q1'
 
 for i in range(len(argv)):
     if argv[i] == '-t':
         task = argv[i + 1]
-    if argv[i] == '-mpi':
-        mpi = argv[i + 1]
+    if argv[i] == '-q':
+        q = argv[i + 1]
     if argv[i] == '-e':
         ecut = argv[i + 1]
     if argv[i] == '-k':
@@ -45,10 +46,27 @@ for i in range(len(argv)):
 
 
 def ops():
-    subprocess.run('~/bin/pvf.py -t gr -d 2 -k {ksp} -e {ec} -s {sig} -vdw {vdw} -lreal f -isif 2 -isym 0 -ibrion {ib} -ediff {ed} -ftol {ft}'
-                   .format(ksp=kspace, ec=ecut, sig=sigma, vdw=vdw_scheme, ib=ibrion, ed=ediff, ft=ftol), shell=True)
-    #subprocess.run(\'mpirun -np {mp} vasp_std\', shell=True)
-    subprocess.run('~/bin/pbs.py dev -N {} -n 2 -v std'.format('-'.join(os.getcwd().split('/')[-5:])), shell=True)
+    # copy custom_incar.dat file if present
+    if 'custom_incar.dat' in os.listdir('../../..'):
+        subprocess.run('cp ../../../custom_incar.dat .', shell=True)
+
+    # read INCAR settings from GGA-SCF for ENCUT and SIGMA
+    incar = Incar.from_file('../../../INCAR').as_dict()
+    ecut, sigma, ispin = incar['ENCUT'], incar['SIGMA'], incar['ISPIN']
+
+    subprocess.run('cp POSCAR orig_POSCAR', shell=True)
+    subprocess.run('~/bin/pvf.py -t gr -d 2 -k {ksp} -e {ec} -s {sig} -ispin {sp} -vdw {vdw} -lreal f -isif 2 -isym 0 -ibrion {ib} -ediff {ed} -ftol {ft} -algo All'
+                   .format(ksp=kspace, ec=ecut, sig=sigma, sp=ispin, vdw=vdw_scheme, ib=ibrion, ed=ediff, ft=ftol), shell=True)
+    # subprocess.run(\'mpirun -np {mp} vasp_std\', shell=True)
+
+    if q == 'dev':
+        subprocess.run('~/bin/pbs.py dev -N {} -n 2 -v std'.format('-'.join(os.getcwd().split('/')[-5:])), shell=True)
+    elif q == 'q1':
+        subprocess.run('~/bin/pbs.py q1 -N {} -v std'.format('-'.join(os.getcwd().split('/')[-5:])), shell=True)
+    else:
+        print('Queue {} not recognized'.format(q))
+        exit()
+
     subprocess.run('find {} -name submit.pbs -exec qsub {{}} \;'.format(os.getcwd()), shell=True)
 
 
@@ -72,8 +90,9 @@ def read_time():
     return time
 
 
-def unfinished():
-    return read_time() is None
+def finished():
+    done = read_time() is not None
+    return done
 
 
 def reset():
@@ -82,7 +101,7 @@ def reset():
         os.chdir(eps_dir)
         for sub_dir in os.listdir():
             os.chdir(sub_dir)
-            if unfinished():
+            if not finished():
                 print('{}/{} unfinished and will be rerun.'.format(eps_dir, sub_dir))
                 subprocess.run('mv CONTCAR POSCAR', shell=True)
                 subprocess.run('find {} -name submit.pbs -exec qsub {{}} \;'.format(os.getcwd()), shell=True)

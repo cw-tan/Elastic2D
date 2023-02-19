@@ -81,9 +81,9 @@ def post_elastic2D(structure_file, plot=False, symmetrize=True):
             os.chdir('deformed_lattice_{}'.format(j + 1))
             try:
                 stress = - np.array(Vasprun('vasprun.xml').ionic_steps[-1]['stress'])  # in kbar
+                stress_eps.append(stress)
             except:
                 print('Error in {}/deformed_lattice_{}'.format(eps_dir, j + 1))
-            stress_eps.append(stress)
             os.chdir('..')
         stresses.append(stress_eps)
         os.chdir('..')
